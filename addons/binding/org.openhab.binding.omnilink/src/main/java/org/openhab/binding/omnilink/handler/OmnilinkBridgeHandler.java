@@ -42,11 +42,9 @@ import com.digitaldan.jomnilinkII.MessageTypes.CommandMessage;
 import com.digitaldan.jomnilinkII.MessageTypes.ObjectStatus;
 import com.digitaldan.jomnilinkII.MessageTypes.OtherEventNotifications;
 import com.digitaldan.jomnilinkII.MessageTypes.SecurityCodeValidation;
-import com.digitaldan.jomnilinkII.MessageTypes.SystemFormats;
 import com.digitaldan.jomnilinkII.MessageTypes.SystemInformation;
 import com.digitaldan.jomnilinkII.MessageTypes.SystemStatus;
 import com.digitaldan.jomnilinkII.MessageTypes.statuses.AreaStatus;
-import com.digitaldan.jomnilinkII.MessageTypes.statuses.ExtendedThermostatStatus;
 import com.digitaldan.jomnilinkII.MessageTypes.statuses.Status;
 import com.digitaldan.jomnilinkII.MessageTypes.statuses.UnitStatus;
 import com.digitaldan.jomnilinkII.MessageTypes.statuses.ZoneStatus;
@@ -59,7 +57,6 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
 public class OmnilinkBridgeHandler extends BaseBridgeHandler implements NotificationListener {
-
     private Logger logger = LoggerFactory.getLogger(OmnilinkBridgeHandler.class);
     private OmnilinkDiscoveryService bridgeDiscoveryService;
     private Connection omniConnection;
@@ -68,9 +65,6 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
     private Map<Integer, Thing> unitThings = Collections.synchronizedMap(new HashMap<Integer, Thing>());
     private Map<Integer, Thing> zoneThings = Collections.synchronizedMap(new HashMap<Integer, Thing>());
     private Map<Integer, Thing> buttonThings = Collections.synchronizedMap(new HashMap<Integer, Thing>());
-    private Map<Integer, Thing> thermostatThings = Collections.synchronizedMap(new HashMap<Integer, Thing>());
-
-    private TemperatureFormat temperatureFormat;
 
     private ScheduledFuture<?> scheduledRefresh;
     // private CacheHolder<Unit> nodes;
@@ -114,16 +108,6 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
             throws OmniInvalidResponseException, OmniUnknownMessageTypeException, BridgeOfflineException {
         try {
             return omniConnection.reqSystemInformation();
-        } catch (IOException | OmniNotConnectedException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
-            throw new BridgeOfflineException(e);
-        }
-    }
-
-    public SystemFormats reqSystemFormats()
-            throws OmniInvalidResponseException, OmniUnknownMessageTypeException, BridgeOfflineException {
-        try {
-            return omniConnection.reqSystemFormats();
         } catch (IOException | OmniNotConnectedException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
             throw new BridgeOfflineException(e);
@@ -180,8 +164,8 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
         }
     }
 
-    public void registerDiscoveryService(OmnilinkDiscoveryService bridgeDiscoveryService) {
-        this.bridgeDiscoveryService = bridgeDiscoveryService;
+    public void registerDiscoveryService(OmnilinkDiscoveryService isyBridgeDiscoveryService) {
+        this.bridgeDiscoveryService = isyBridgeDiscoveryService;
 
     }
 
@@ -212,12 +196,11 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
                     try {
                         OmnilinkBridgeConfig config = getThing().getConfiguration().as(OmnilinkBridgeConfig.class);
                         omniConnection = new Connection(config.getIpAddress(), config.getPort(),
+
                                 config.getKey1() + ":" + config.getKey2());
                         omniConnection.addNotificationListener(OmnilinkBridgeHandler.this);
                         omniConnection.addDisconnectListener(retryingDisconnectListener);
                         omniConnection.enableNotifications();
-                        temperatureFormat = TemperatureFormat.valueOf(reqSystemFormats().getTempFormat());
-
                         updateStatus(ThingStatus.ONLINE);
                         // let's start a task which refreshes status
                         scheduleRefresh();
@@ -289,17 +272,7 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
                 if (theThing != null) {
                     ((AreaHandler) theThing.getHandler()).handleAreaEvent(areaStatus);
                 }
-            } else if (s instanceof ExtendedThermostatStatus) {
-                ExtendedThermostatStatus thermostatStatus = (ExtendedThermostatStatus) s;
-                Integer number = new Integer(thermostatStatus.getNumber());
-                Thing theThing = thermostatThings.get(number);
-                if (theThing != null) {
-                    ((ThermostatHandler) theThing.getHandler()).handleThermostatStatus(thermostatStatus);
-                }
-            } else {
-                logger.debug("Received Object Status Notification that was not processed: {}", status);
             }
-
         }
     }
 
@@ -350,19 +323,6 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
                 buttonNumber = Integer.parseInt(childThing.getConfiguration().getProperties().get("number").toString());
             }
             buttonThings.put(buttonNumber, childThing);
-        } else if (childHandler instanceof ThermostatHandler) {
-            if (!childThing.getConfiguration().getProperties().containsKey("number")) {
-                throw new IllegalArgumentException("childThing does not have required 'number' property");
-            }
-            int thermostatNumber;
-            if (childThing.getConfiguration().getProperties().get("number") instanceof BigDecimal) {
-                thermostatNumber = ((BigDecimal) childThing.getConfiguration().getProperties().get("number"))
-                        .intValue();
-            } else {
-                thermostatNumber = Integer
-                        .parseInt(childThing.getConfiguration().getProperties().get("number").toString());
-            }
-            thermostatThings.put(thermostatNumber, childThing);
         } else {
             logger.warn("Did not add childThing to a map: {}", childThing);
         }
@@ -442,10 +402,6 @@ public class OmnilinkBridgeHandler extends BaseBridgeHandler implements Notifica
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, e.getMessage());
             throw new BridgeOfflineException(e);
         }
-    }
-
-    public TemperatureFormat getTemperatureFormat() {
-        return temperatureFormat;
     }
 
     private UnitStatus[] getUnitStatuses() throws OmniInvalidResponseException, OmniUnknownMessageTypeException,
