@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Private-Package: org.openhab.io.alexa.internal
+Ignore-Package: org.openhab.io.alexa.internal
+Bundle-ManifestVersion: 2
+Bundle-Name: openHAB Alexa Configuration Bundle
+Bundle-SymbolicName: org.openhab.io.alexa
+Bundle-Version: 2.1.0.qualifier
+Service-Component: OSGI-INF/*.xml
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Import-Package: 
+ org.eclipse.smarthome.config.core,
+ org.eclipse.smarthome.core.events,
+ org.eclipse.smarthome.core.items,
+ org.eclipse.smarthome.core.items.events,
+ org.openhab.core,
+ org.osgi.framework,
+ org.osgi.service.cm,
+ org.osgi.service.event,
+ org.slf4j
+Bundle-ClassPath: .
+Bundle-Vendor: openHAB.org
+Bundle-ActivationPolicy: lazy

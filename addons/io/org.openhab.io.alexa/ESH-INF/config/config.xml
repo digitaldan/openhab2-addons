@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config-description:config-descriptions
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:config-description="http://eclipse.org/smarthome/schemas/config-description/v1.0.0"
+    xsi:schemaLocation="http://eclipse.org/smarthome/schemas/config-description/v1.0.0
+        http://eclipse.org/smarthome/schemas/config-description-1.0.0.xsd">
+    <config-description uri="io:alexa">
+        <parameter name="expose-all" type="text" required="true">
+            <label>Expose all items to Alexa</label>
+            <description></description>
+            <options>
+                <option value="true">Expose all item to Alexa</option>
+                <option value="false">Only expose selected items to Alexa</option>
+            </options>
+            <default>true</default>
+        </parameter>
+        <parameter name="exposed-items" type="text" required="false" multiple="true">
+            <label>Items to expose to Alexa</label>
+            <description>List of items that are made accessible to Alexa. Only items with supported tags will be exposed.</description>
+            <context>item</context>
+            <filter>
+                <criteria name="tags">Lighting,Switchable,CurrentTemperature,Thermostat,Lock</criteria>
+            </filter>
+        </parameter>
+    </config-description>
+</config-description:config-descriptions>
