@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="grandstreamgds"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<thing-type id="gds">
+		<label>Grandstream GDS Binding Thing</label>
+		<description>Grandstream GDS Intercom</description>
+		<channels>
+			<channel id="dooropen" typeId="dooropen"/>
+		</channels>
+
+		<config-description>
+			<parameter name="config1" type="text" required="true">
+				<label>Sample Parameter</label>
+				<description>This is a sample text configuration parameter</description>
+			</parameter>
+		</config-description>
+
+	</thing-type>
+
+	<!-- Sample Channel Type -->
+	<channel-type id="dooropen">
+		<item-type>Switch</item-type>
+		<label>Opens Door</label>
+		<description>Opens Door</description>
+	</channel-type>
+
+</thing:thing-descriptions>
