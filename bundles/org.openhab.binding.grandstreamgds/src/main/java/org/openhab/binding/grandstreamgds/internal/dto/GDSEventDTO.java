@@ -10,17 +10,19 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.grandstreamgds.internal;
+package org.openhab.binding.grandstreamgds.internal.dto;
 
 /**
- * The {@link GrandstreamGDSConfiguration} class contains fields mapping thing configuration parameters.
  *
- * @author Dan Cunningham - Initial contribution
+ * @author daniel
+ *
  */
-public class GrandstreamGDSConfiguration {
-
-    public String url;
+public class GDSEventDTO {
+    public String mac;
+    public String type;
+    public String content;
+    public String sipnum;
     public String username;
-    public String password;
-    public Boolean modifyGdsConfig;
+    public String date;
+    public String cardid;
 }

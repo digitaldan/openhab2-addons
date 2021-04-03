@@ -18,8 +18,8 @@ import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.jetty.client.HttpClient;
-import org.openhab.core.io.net.http.HttpClientFactory;
+import org.openhab.core.net.HttpServiceUtil;
+import org.openhab.core.net.NetworkAddressService;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
@@ -28,6 +28,7 @@ import org.openhab.core.thing.binding.ThingHandlerFactory;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.http.HttpService;
 
 /**
  * The {@link GrandstreamGDSHandlerFactory} is responsible for creating things and thing
@@ -36,16 +37,17 @@ import org.osgi.service.component.annotations.Reference;
  * @author Dan Cunningham - Initial contribution
  */
 @NonNullByDefault
-@Component(configurationPid = "binding.grandstreamgds", service = ThingHandlerFactory.class)
+@Component(configurationPid = "binding.grandstreamgds", service = { ThingHandlerFactory.class,
+        GrandstreamGDSHandlerFactory.class })
 public class GrandstreamGDSHandlerFactory extends BaseThingHandlerFactory {
 
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Set.of(THING_TYPE_GDS);
-
-    private final HttpClient httpClient;
+    private @Nullable NetworkAddressService networkAddressService;
+    private final HttpService httpService;
 
     @Activate
-    public GrandstreamGDSHandlerFactory(final @Reference HttpClientFactory httpClientFactory) {
-        this.httpClient = httpClientFactory.getCommonHttpClient();
+    public GrandstreamGDSHandlerFactory(@Reference HttpService httpService) {
+        this.httpService = httpService;
     }
 
     @Override
@@ -56,11 +58,30 @@ public class GrandstreamGDSHandlerFactory extends BaseThingHandlerFactory {
     @Override
     protected @Nullable ThingHandler createHandler(Thing thing) {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
+        NetworkAddressService networkAddressServiceLocal = networkAddressService;
+        int port = HttpServiceUtil.getHttpServicePort(bundleContext);
+
+        if (port <= 0) {
+            port = 8080;
+        }
+
+        if (networkAddressServiceLocal == null) {
+            throw new RuntimeException("Network address service could not be set");
+        }
 
         if (THING_TYPE_GDS.equals(thingTypeUID)) {
-            return new GrandstreamGDSHandler(thing, httpClient);
+            return new GrandstreamGDSHandler(thing, httpService, networkAddressServiceLocal, port);
         }
 
         return null;
+    }
+
+    @Reference
+    protected void setNetworkAddressService(NetworkAddressService networkAddressService) {
+        this.networkAddressService = networkAddressService;
+    }
+
+    protected void unsetNetworkAddressService(NetworkAddressService networkAddressService) {
+        this.networkAddressService = null;
     }
 }

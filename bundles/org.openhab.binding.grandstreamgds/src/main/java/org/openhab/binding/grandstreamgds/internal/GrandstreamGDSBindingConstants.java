@@ -24,7 +24,9 @@ import org.openhab.core.thing.ThingTypeUID;
 @NonNullByDefault
 public class GrandstreamGDSBindingConstants {
 
-    private static final String BINDING_ID = "grandstreamgds";
+    public static final String BINDING_ID = "grandstreamgds";
+
+    public static final String BASE_SERVLET_PATH = "/grandstreamgds";
 
     // List of all Thing Type UIDs
     public static final ThingTypeUID THING_TYPE_GDS = new ThingTypeUID(BINDING_ID, "gds");
