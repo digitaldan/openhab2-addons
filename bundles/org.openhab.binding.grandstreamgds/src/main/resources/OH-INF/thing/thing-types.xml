@@ -171,6 +171,11 @@
 				<label>GDS Password</label>
 				<description>The password used to log into the GDS web UI.</description>
 			</parameter>
+			<parameter name="refreshSeconds" type="integer" required="true">
+				<label>GDS Refresh Interval</label>
+				<description>How frequently in seconds to poll the GDS for updates</description>
+				<default>10</default>
+			</parameter>
 			<parameter name="modifyGdsConfig" type="boolean" required="true">
 				<label>Modify GDS Configuration</label>
 				<description>By Default the binding will attempt to update the GDS to have it send events to openHAB.  Disabling this will require manual configuration of the GDS through it's web UI.</description>

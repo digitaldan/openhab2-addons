@@ -486,6 +486,7 @@ public enum GDSConfigParameter {
     GDSConfigParameter(String id, String xpath, String description) {
         this.xapth = xpath;
         this.description = description;
+        this.id = id;
     }
 
     public String getId() {

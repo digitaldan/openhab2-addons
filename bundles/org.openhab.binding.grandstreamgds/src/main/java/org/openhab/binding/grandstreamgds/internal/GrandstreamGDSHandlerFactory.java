@@ -18,7 +18,6 @@ import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.core.net.HttpServiceUtil;
 import org.openhab.core.net.NetworkAddressService;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingTypeUID;
@@ -59,18 +58,13 @@ public class GrandstreamGDSHandlerFactory extends BaseThingHandlerFactory {
     protected @Nullable ThingHandler createHandler(Thing thing) {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
         NetworkAddressService networkAddressServiceLocal = networkAddressService;
-        int port = HttpServiceUtil.getHttpServicePort(bundleContext);
-
-        if (port <= 0) {
-            port = 8080;
-        }
 
         if (networkAddressServiceLocal == null) {
             throw new RuntimeException("Network address service could not be set");
         }
 
         if (THING_TYPE_GDS.equals(thingTypeUID)) {
-            return new GrandstreamGDSHandler(thing, httpService, networkAddressServiceLocal, port);
+            return new GrandstreamGDSHandler(thing, httpService, networkAddressServiceLocal);
         }
 
         return null;

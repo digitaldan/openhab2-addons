@@ -23,4 +23,5 @@ public class GrandstreamGDSConfiguration {
     public String username;
     public String password;
     public Boolean modifyGdsConfig;
+    public Integer refreshSeconds;
 }

@@ -48,7 +48,6 @@ import org.openhab.core.net.NetworkAddressService;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
-import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
@@ -85,16 +84,15 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
     private String gdsBaseURL = "";
     private String userName = "";
     private String password = "";
+    private int refreshDurationSeconds = 10;
 
     private HttpClient httpClient;
     private NetworkAddressService networkAddressService;
-    private int httpLisenerPort;
     private final HttpService httpService;
     private final String servletPath;
     private @Nullable ScheduledFuture<?> pollFuture;
 
-    public GrandstreamGDSHandler(Thing thing, HttpService httpService, NetworkAddressService networkAddressService,
-            int httpLisenerPort) {
+    public GrandstreamGDSHandler(Thing thing, HttpService httpService, NetworkAddressService networkAddressService) {
         super(thing);
         this.networkAddressService = networkAddressService;
         this.httpService = httpService;
@@ -122,18 +120,18 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
         gdsBaseURL = config.url;
         userName = config.username;
         password = config.password;
+        refreshDurationSeconds = config.refreshSeconds;
         updateStatus(ThingStatus.UNKNOWN);
-        if (config.modifyGdsConfig) {
-            scheduler.execute(() -> {
-                try {
+        scheduler.execute(() -> {
+            try {
+                if (config.modifyGdsConfig) {
                     updateEventStreamConfig();
-                    updateStatus(ThingStatus.ONLINE);
-                } catch (InterruptedException | ExecutionException | TimeoutException | GDSResponseException e) {
-                    logger.debug("Could not update GDS", e);
                 }
-            });
-        }
-        initPolling(0);
+                initPolling(0);
+            } catch (InterruptedException | ExecutionException | TimeoutException | GDSResponseException e) {
+                logger.debug("Could not update GDS", e);
+            }
+        });
     }
 
     @Override
@@ -195,7 +193,8 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
 
     private synchronized void initPolling(int initalDelay) {
         clearPolling();
-        pollFuture = scheduler.scheduleWithFixedDelay(this::poll, initalDelay, 30, TimeUnit.SECONDS);
+        pollFuture = scheduler.scheduleWithFixedDelay(this::poll, initalDelay, refreshDurationSeconds,
+                TimeUnit.SECONDS);
     }
 
     /**
@@ -203,33 +202,34 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
      */
     private void clearPolling() {
         ScheduledFuture<?> pollFutureLocal = pollFuture;
-        if (pollFutureLocal != null && !pollFutureLocal.isCancelled()) {
+        if (pollFutureLocal != null) {
             logger.trace("Canceling future");
-            pollFutureLocal.cancel(false);
+            pollFutureLocal.cancel(true);
         }
     }
 
     private void poll() {
-        try {
-            updateDigitalInputState();
-            updateStatus(ThingStatus.ONLINE);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            logger.debug("Could not update DI states", e);
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
-        } catch (GDSResponseException e) {
-            String message = e.responseCode.getDescription();
-            switch (e.responseCode) {
-                case AUTHENTICATION_FAILED:
-                case RETRIEVE_PASSWORD_NO_ACCOUNT:
-                case USER_DOES_NOT_EXIST:
-                case PASSWORD_ERROR:
-                    clearPolling();
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, message);
-                    break;
-                default:
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, message);
-            }
-        }
+        // try {
+        // updateDigitalInputState();
+        // updateStatus(ThingStatus.ONLINE);
+        // } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        // logger.debug("Could not update DI states", e);
+        // updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
+        // } catch (GDSResponseException e) {
+        // String message = e.responseCode.getDescription();
+        // switch (e.responseCode) {
+        // case AUTHENTICATION_FAILED:
+        // case RETRIEVE_PASSWORD_NO_ACCOUNT:
+        // case USER_DOES_NOT_EXIST:
+        // case PASSWORD_ERROR:
+        // clearPolling();
+        // updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, message);
+        // break;
+        // default:
+        // updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, message);
+        // }
+        // }
+        updateStatus(ThingStatus.ONLINE);
     }
 
     private void updateEventStreamConfig()
@@ -240,10 +240,13 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
             return;
         }
 
-        if (httpLisenerPort <= 0) {
-            logger.warn("Http listening port not found, aborting GDS update");
-            return;
-        }
+        @SuppressWarnings("null")
+        int httpLisenerPort = Integer.getInteger("org.osgi.service.http.port", 8080);
+
+        // if (httpLisenerPort <= 0) {
+        // logger.warn("Http listening port not found, aborting GDS update");
+        // return;
+        // }
 
         String cookie = configLogin();
         if (cookie == null) {
@@ -294,8 +297,8 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
             fields.put("t", String.valueOf(System.currentTimeMillis()));
             ContentResponse response = doPost(String.format(CONFIG_SET_URL, gdsBaseURL), cookie, fields);
             String content = response.getContentAsString();
-            String digital1 = getXMLValue(content, EVENT_DIGIT_INPUT_1_STATUS.getXapth());
-            String digital2 = getXMLValue(content, EVENT_DIGIT_INPUT_2_STATUS.getXapth());
+            String digital1 = getXMLValue(content, "Configuration/" + EVENT_DIGIT_INPUT_1_STATUS.getId());
+            String digital2 = getXMLValue(content, "Configuration/" + EVENT_DIGIT_INPUT_2_STATUS.getId());
             logger.debug("DI {} : {}", digital1, digital2);
         }
     }
@@ -306,7 +309,9 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
         logger.debug("Cookie {}", cookie);
         if (cookie != null) {
             String doorConfigUrl = String.format(CONFIG_EXPORT_URL, gdsBaseURL);
-            ContentResponse response = doGet(doorConfigUrl, cookie);
+            // ContentResponse response = doGet(doorConfigUrl, cookie);
+            // we don't want GDS response checking, so call httpClient directly
+            ContentResponse response = httpClient.newRequest(doorConfigUrl).header("Cookie", cookie).send();
             return response.getContentAsString();
         }
         return null;
@@ -403,7 +408,7 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
     private void checkGDSResponse(String data) throws GDSResponseException {
         String value = getXMLValue(data, "Configuration/ResCode");
         GDSResponseCode responseCode = GDSResponseCode.fromCode(value);
-        if (responseCode == GDSResponseCode.SUCCESS) {
+        if (responseCode != GDSResponseCode.SUCCESS) {
             throw new GDSResponseException(responseCode);
         }
     }
