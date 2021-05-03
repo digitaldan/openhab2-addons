@@ -43,7 +43,7 @@ import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.util.Fields;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.openhab.binding.grandstreamgds.internal.dto.GDSEventDTO;
-import org.openhab.core.library.types.OnOffType;
+import org.openhab.core.library.types.StringType;
 import org.openhab.core.net.NetworkAddressService;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
@@ -160,21 +160,19 @@ public class GrandstreamGDSHandler extends BaseThingHandler {
                 initPolling(0);
             }
 
-            if (command instanceof OnOffType) {
-                if (command == OnOffType.ON) {
-                    String remoteCode;
-                    try {
-                        remoteCode = getRemoteCode();
-                        if (remoteCode != null) {
-                            openDoor(remoteCode);
-                        }
-                    } catch (InterruptedException | ExecutionException | TimeoutException | GDSResponseException e) {
-                        logger.debug("Could not open gate", e);
+            if (command instanceof StringType) {
+                String remoteCode;
+                try {
+                    remoteCode = getRemoteCode();
+                    if (remoteCode != null) {
+                        openDoor(remoteCode);
                     }
-
-                    updateState(channelUID.getId(), OnOffType.OFF);
+                } catch (InterruptedException | ExecutionException | TimeoutException | GDSResponseException e) {
+                    logger.debug("Could not open gate", e);
                 }
+                // updateState(channelUID.getId(), OnOffType.OFF);
             }
+
         }
     }
 

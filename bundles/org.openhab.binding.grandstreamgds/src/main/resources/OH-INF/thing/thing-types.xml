@@ -187,9 +187,14 @@
 
 
 	<channel-type id="dooropen">
-		<item-type>Switch</item-type>
+		<item-type>String</item-type>
 		<label>Opens Door</label>
 		<description>Opens Door</description>
+		<command>
+			<options>
+				<option value="OPEN">Open</option>
+			</options>
+		</command>
 	</channel-type>
 
 	<channel-type id="digital_input">
